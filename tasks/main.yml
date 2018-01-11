@@ -244,9 +244,9 @@
       # export the ANTs path
       #
       # ANTs 
-      if [ -d "{{ ants_dir_path }}/ants/bin/" ]
+      if [ -d "{{ ants_dir_path }}/bin/" ]
       then
-         export ANTSPATH={{ ants_dir_path }}/ants/bin/
+         export ANTSPATH={{ ants_dir_path }}/bin/
          export PATH=${ANTSPATH}:$PATH
       fi
   when: ants_state == 'absent' or ants_state == 'purge'
