@@ -1,0 +1,70 @@
+# test file for bash
+---
+- hosts: all
+  remote_user: ubuntu
+  become: true
+  pre_tasks:
+
+    - set_fact: fact_controller_user="{{ lookup('env','USER') }}"
+    - debug: var=fact_controller_user
+
+    - set_fact: fact_controller_home="{{ lookup('env','HOME') }}"
+    - debug: var=fact_controller_home
+
+
+  vars:
+## controller user vars
+
+    - project_controller_user_name      : '{{ fact_controller_user }}'
+    - project_controller_user_home      : '{{ fact_controller_home }}'
+    - project_controller_resources_home : '{{ project_controller_user_home }}'
+
+## deployment user vars
+
+    - project_deployment_user_name      : 'ubuntu'
+    - project_deployment_user_home      : '/home/{{ project_deployment_user_name }}'
+    - project_deployment_resources_home : '{{ project_deployment_user_home }}/sw'
+
+# standard vars start here ####################################################
+
+    - ants_debug : 'true'
+
+    - ants_controller_user           : '{{ project_controller_user_name }}'
+    - ants_controller_home           : '{{ project_controller_user_home }}'
+    - ants_controller_resource_home : '{{ project_controller_resources_home }}'
+
+    - ants_deployment_user           : '{{ project_deployment_user_name }}'
+    - ants_deployment_home           : '{{ project_deployment_user_home }}'
+    - ants_deployment_resource_home : '{{ project_deployment_resources_home }}'
+
+
+    - ants_remote_user : 'ubuntu'
+    - ants_state         : 'present' # 'absent' # 'purge'
+    - ants_build         : false
+    - ants_reboot_target : false # does not work with Vagrant
+    - ants_ssh_port      : 2200
+    - ants_install_type  : 'all_users'
+    - ants_debug         : true
+
+    - ants_bashrc_src_path    : '../files/bashrc'
+    - ants_git_version        : 'v2.1.0'
+    - ants_git_url            : 'git://github.com/stnava/ANTs.git'
+    - ants_dir_path           : '/usr/bin/ants'
+    - ants_src_path           : '{{ ants_deployment_resource_path }}'
+    - ants_deployment_resource_path: '{{ ants_deployment_resource_home }}/{{ ansible_distribution | lower }}/{{ ansible_distribution_version }}/ants/{{ ants_version}}'
+
+    - ants_directory_state    : 'directory'
+    - ants_owner              : 'root' # Installs for all users (/usr/bin/ants )
+    - ants_group              : 'root' # Installs for all users (/usr/bin/ants )
+#    - ants_owner              : '{{ ants_remote_user }}' # per user installs (~/bin/ants)
+#    - ants_group              : '{{ ants_remote_user }}' # per user installs (~/bin/ants)
+    - ants_mode               : '0755'
+
+    - ants_cmake_command     : '/usr/bin/ccmake'
+    - ants_cmake_binary_dir  : '{{ ants_dir_path }}'
+    - ants_cmake_source_dir  : '{{ ants_src_path }}'
+    - ants_cmake_jobs        : 1
+
+  roles:
+    - ../../
+

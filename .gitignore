@@ -1,0 +1,17 @@
+# temp files
+*~
+*.log
+# private files
+.private
+.prv
+*.retry
+.vault
+ansible.log
+
+# directories
+
+.vagrant
+group_vars/*
+host_vars/*
+roles/*
+ubuntu-xenial-16.04-cloudimg-console.log

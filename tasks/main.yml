@@ -1,0 +1,259 @@
+---
+# roles/ants/tasks/main.yml
+
+# was an ants directory created before now?
+
+- name: "Do we already have an ants directory?"
+  stat:
+    path: '{{ ants_dir_path }}'
+  register: stat_ants_result
+
+- name: "check value of stat_ants_result"
+  debug:
+    var=stat_ants_result
+
+# install any requirements
+
+## Update the apt-cache
+
+- name: "update apt cache"
+  apt: update_cache=yes cache_valid_time=43200
+  tags: [ 'packages', 'ants-requirements' ]
+  when: ants_state == 'present'
+
+## UCF-OLD Check
+#
+# Bug fix for Ubuntu 16.04
+
+- name: "Check if 50unattended-upgrades.ucf.old exists when workstation role starts"
+  stat:
+    path: '/etc/apt/apt.conf.d/50unattended-upgrades.ucf-old'
+  register: stat_result
+  when: ants_state == 'present'
+
+- name: "check value of stat_50unattended-upgrades_ucf_old_result"
+  debug:
+    var=stat_result
+
+- name: "Check for 50unattended-upgrades.ucf-old, remove and notify if found"
+  file:
+    path: '/etc/apt/apt.conf.d/50unattended-upgrades.ucf.old'
+    state: absent
+  when: ants_state == 'present'
+
+## dist-upgrade
+
+- name: "run an apt-get dist-upgrade"
+  apt: upgrade=dist
+  tags: [ 'packages' ]
+  when: ants_state == 'present'
+
+# restart the system 
+
+- name: "debug the value of the ansible_connection variable"
+  debug:
+    var=ansible_connection
+  tags: [ 'debug' ]
+
+- name: "debug the value of the ants_reboot_target variable"
+  debug:
+    var=ants_reboot_target
+  tags: [ 'debug' ]
+
+- name: "restart the system after dist-upgrade"
+  shell: sleep 2 && shutdown -r now "Ansible actuated reboot following dist-upgrade"
+  async: 1
+  poll: 0
+  become: true
+  ignore_errors: true
+  register: ants_reboot_target_test
+  when: ansible_connection != 'local' and ants_reboot_target is defined and ants_reboot_target == true and ants_state == 'present'
+
+# wait for target systems port 22 to become available before continuing
+
+- name: "debug the value of the ants_reboot_target_test variable"
+  debug:
+    var=ants_reboot_target_test
+  tags: [ 'debug' ]
+
+
+- name: "debug the value of ansible_connection"
+  debug:
+    var=ansible_connection
+  tags: [ 'debug' ]
+
+
+- name: "debug the value of ants_ssh_port"
+  debug:
+    var=ants_ssh_port
+  tags: [ 'debug' ]
+
+
+#- name: wait for the server to restart
+#  local_action: wait_for host={{ inventory_hostname }}
+#                port='{{ ants_ssh_port }}'
+#                search_regex=OpenSSH
+#                delay=40
+#                timeout=300
+#                state=started
+#  become: false
+#  when: ants_reboot_target_test.started == 1 and ants_reboot_target is defined and ants_reboot_target == true and ants_state == 'present'
+
+- name: "pause when os is ubuntu 16.04 cause it takes a bit longer for shorewall to start for some reason"
+  pause: seconds=10
+  when: ansible_connection != 'local' and ants_reboot_target is defined and ants_reboot_target == true and ansible_distribution_version == '16.04' and ants_state == 'present'
+
+## Ensure any requirements for Ubuntu 16.04 are installed
+
+- name: "ensure Ubuntu 16.04 requirements are installed"
+  apt: name={{ item }} state=present
+  become: True
+  with_items:
+    - git
+    - cmake-curses-gui
+    - zlib1g-dev
+    - gcc
+    - g++
+  tags: [ 'packages', 'ants-requirements' ]
+  when: ants_state == 'present'
+
+# git checkout
+
+- name: Create ants resource path
+  become: true
+  file: 
+    path: '{{ ants_deployment_resource_path}}'
+    state: directory
+    owner: '{{ ants_deployment_user }}'
+    group: '{{ ants_deployment_user }}'
+    mode: 0750
+
+- name: "Clone ANTs repository"
+  git:
+    repo: '{{ ants_git_url }}'
+    dest: '{{ ants_deployment_resource_path }}'
+    version: '{{ ants_version }}'
+  when: ants_state == 'present'
+
+- name: "Create the ants bin directory"
+  file:
+    path : '{{ ants_dir_path }}'
+    owner: '{{ ants_owner }}'
+    group: '{{ ants_group }}'
+    mode : '{{ ants_mode }}'
+    state : '{{ ants_directory_state }}'
+  when: ants_state == 'present'
+
+- name: "get our current home directory"
+  become: '{{ ants_deployment_user }}'
+  shell: >
+    getent passwd {{ ants_deployment_user }} | cut -d: -f6
+  changed_when: false
+  register: user_home
+
+- name: debug output
+  debug: var=user_home.stdout
+
+- name: "When our install type is all_users copy over usr_bin_ants.tar"
+  copy:
+    src : 'usr_bin_ants.tar'
+    dest: '{{ user_home.stdout }}/usr_bin_ants.tar'
+    owner: '{{ ants_owner }}'
+    group: '{{ ants_group }}'
+    mode : '{{ ants_mode }}'
+  when : ants_install_type == 'all_users'  and ants_state == 'present'
+
+
+
+- name: "debug the value of ants_dir_path"
+  debug:
+    var=ants_dir_path
+  tags: [ 'debug' ]
+
+
+- name: "when ants_install_type is all_users we untar our make stuff to the bin/ants dir"
+  become: true 
+  unarchive:
+    src: '{{ user_home.stdout }}/usr_bin_ants.tar'
+    dest: '{{ ants_dir_path }}'
+    remote_src: yes
+  register: ants_package_unarchived  
+  
+
+
+#   shell: "tar -cvf {{ user_home.stdout }}/usr_bin_ants.tar '{{ ants_dir_path }}/'"
+#   args:
+#    chdir: '{{ user_home.stdout }}'
+#    creates: '{{ ants_dir_path }}/ANTS-build'
+#  when : ants_install_type == 'all_users' and ants_state == 'present'
+
+# untested
+#
+# Asynchronous Actions and Polling
+# http://docs.ansible.com/ansible/playbooks_async.html
+#
+# easiest way to do this is to kick them off all at once and then poll until they are done.
+#
+
+- name: simulate long running op (15 sec), wait for up to 45, poll every 5
+  command: /bin/sleep 15
+  async: 45
+  poll: 5
+
+- name: "Change into the working directory and execute make if creates var value does not exist"
+  shell: make -j {{ ants_cmake_jobs }} | tee ants_make_output.log
+  args:
+    chdir: '{{ ants_dir_path }}/'
+    creates: '{{ ants_dir_path }}/ANTS-build'
+  async: 18000  # wait up to 5 hours
+  poll: 30      # poll every 30 seconds.
+  when : ants_state == 'present' and ants_install_type == 'all_users'
+
+
+# if path ends with "/", only inside contents of that directory are copied to destination.
+# remote_src does not copy recursivly at the time this script was created.
+
+- name: "debug the value of ants_deployment_user"
+  debug:
+     var=ants_deployment_user
+  tags: [ 'debug' ]
+
+- name: "Copy ANTs scripts"
+  shell: cp {{ ants_deployment_resource_path }}/Scripts/ ~{{ ants_dir_path }}/bin/
+  
+
+#   copy:
+#    src : '{{ ants_deployment_resource_path }}/Scripts/'
+#    dest: '{{ ants_deployment_home }}/{{ ants_dir_path }}/bin'
+#    owner: '{{ ants_owner }}'
+#    group: '{{ ants_group }}'
+#    mode : '{{ ants_mode }}'
+#  when : ants_state == 'present' and ants_install_type == 'all_users'
+
+## When ants_state == 'absent' or ants_state == 'purge'
+#
+# We completly remove the 
+
+- name: "remove ants bin and path exports to /etc/skel/.bashrc when ants_state is absent or purge"
+  become: true
+  blockinfile:
+    marker: '## {mark} ANSIBLE MANAGED BLOCK in ~/.bashrc for ANTs'
+    dest: '/etc/skel/.bashrc'
+    insertafter: 'EOF'
+    block: |
+      # export the ANTs path
+      #
+      # ANTs 
+      if [ -d "{{ ants_dir_path }}/ants/bin/" ]
+      then
+         export ANTSPATH={{ ants_dir_path }}/ants/bin/
+         export PATH=${ANTSPATH}:$PATH
+      fi
+  when: ants_state == 'absent' or ants_state == 'purge'
+
+- name: "Remove ANTs bin and source dirs when ants_state is purge"
+  shell: 'rm -R {{ ants_dir_path }} && rm -R {{ ants_src_path }}'
+  args:
+    chdir: '{{ user_home.stdout }}'
+  ignore_errors: true
+  when : ants_state == 'absent' or ants_state == 'purge'
