@@ -9,7 +9,7 @@ ANTs takes a **very** long time to compile. You might want to start this before 
 
 ## Resources
 
-* [https://github.com/stnava/ANTs/releases](https://github.com/stnava/ANTs/releases)
+* [https://github.com/stnava/ANTs/releases](/releases)
 * [ updated ANTs compile instructions: ITKv4]( https://brianavants.wordpress.com/2012/04/13/updated-ants-compile-instructions-april-12-2012/ ) 
 
 
@@ -43,10 +43,7 @@ ants_ssh_port      : 22
 
 ants_git_version        : 'v2.1.0'
 ants_git_url            : 'git://github.com/stnava/ANTs.git'
-ants_dir_path           : '/usr/bin/ants'
-ants_src_path           : '/usr/src/ANTs'
-#ants_dir_path           : '~/bin/ants' # Adjust ants_owner
-#ants_src_path           : '~/src/ANTs' # and ants_group...
+ants_dir_path           : '/opt/ants'
 
 ants_directory_state    : 'directory'
 ants_owner              : 'root'
