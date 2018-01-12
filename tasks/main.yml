@@ -89,15 +89,6 @@
   tags: [ 'debug' ]
 
 
-#- name: wait for the server to restart
-#  local_action: wait_for host={{ inventory_hostname }}
-#                port='{{ ants_ssh_port }}'
-#                search_regex=OpenSSH
-#                delay=40
-#                timeout=300
-#                state=started
-#  become: false
-#  when: ants_reboot_target_test.started == 1 and ants_reboot_target is defined and ants_reboot_target == true and ants_state == 'present'
 
 - name: "pause when os is ubuntu 16.04 cause it takes a bit longer for shorewall to start for some reason"
   pause: seconds=10
@@ -154,7 +145,7 @@
 - name: debug output
   debug: var=user_home.stdout
 
-- name: "When our install type is all_users copy over usr_bin_ants.tar"
+- name: "Copy over usr_bin_ants.tar"
   copy:
     src : 'usr_bin_ants.tar'
     dest: '{{ user_home.stdout }}/usr_bin_ants.tar'
@@ -164,14 +155,13 @@
   when : ants_install_type == 'all_users'  and ants_state == 'present'
 
 
-
 - name: "debug the value of ants_dir_path"
   debug:
     var=ants_dir_path
   tags: [ 'debug' ]
 
 
-- name: "when ants_install_type is all_users we untar our make stuff to the bin/ants dir"
+- name: "Unarchive our make stuff to the bin/ants dir, including Scripts"
   become: true 
   unarchive:
     src: '{{ user_home.stdout }}/usr_bin_ants.tar'
@@ -181,19 +171,6 @@
   
 
 
-#   shell: "tar -cvf {{ user_home.stdout }}/usr_bin_ants.tar '{{ ants_dir_path }}/'"
-#   args:
-#    chdir: '{{ user_home.stdout }}'
-#    creates: '{{ ants_dir_path }}/ANTS-build'
-#  when : ants_install_type == 'all_users' and ants_state == 'present'
-
-# untested
-#
-# Asynchronous Actions and Polling
-# http://docs.ansible.com/ansible/playbooks_async.html
-#
-# easiest way to do this is to kick them off all at once and then poll until they are done.
-#
 
 - name: simulate long running op (15 sec), wait for up to 45, poll every 5
   command: /bin/sleep 15
@@ -210,31 +187,20 @@
   when : ants_state == 'present' and ants_install_type == 'all_users'
 
 
-# if path ends with "/", only inside contents of that directory are copied to destination.
-# remote_src does not copy recursivly at the time this script was created.
 
 - name: "debug the value of ants_deployment_user"
   debug:
      var=ants_deployment_user
   tags: [ 'debug' ]
 
-- name: "Copy ANTs scripts"
-  shell: cp {{ ants_deployment_resource_path }}/Scripts/ ~{{ ants_dir_path }}/bin/
-  
+#- name: "ensure ANTs scripts directoy exists under ants_dir_path"
+#  file:
+#     path: '{{ ants_dir_path }}/bin'
+#     state: directory
+#     recurse: yes
 
-#   copy:
-#    src : '{{ ants_deployment_resource_path }}/Scripts/'
-#    dest: '{{ ants_deployment_home }}/{{ ants_dir_path }}/bin'
-#    owner: '{{ ants_owner }}'
-#    group: '{{ ants_group }}'
-#    mode : '{{ ants_mode }}'
-#  when : ants_state == 'present' and ants_install_type == 'all_users'
 
-## When ants_state == 'absent' or ants_state == 'purge'
-#
-# We completly remove the 
-
-- name: "remove ants bin and path exports to /etc/skel/.bashrc when ants_state is absent or purge"
+- name: "path exports to /etc/skel/.bashrc when ants_state is absent or purge"
   become: true
   blockinfile:
     marker: '## {mark} ANSIBLE MANAGED BLOCK in ~/.bashrc for ANTs'
@@ -252,7 +218,7 @@
   when: ants_state == 'absent' or ants_state == 'purge'
 
 - name: "Remove ANTs bin and source dirs when ants_state is purge"
-  shell: 'rm -R {{ ants_dir_path }} && rm -R {{ ants_src_path }}'
+  shell: 'rm -R {{ ants_dir_path }}'
   args:
     chdir: '{{ user_home.stdout }}'
   ignore_errors: true
