@@ -9,7 +9,7 @@ ANTs takes a **very** long time to compile. You might want to start this before 
 
 ## Resources
 
-* ( https://github.com/stnava/ANTs/releases )[ https://github.com/stnava/ANTs/releases ]
+* [https://github.com/stnava/ANTs/releases](https://github.com/stnava/ANTs/releases)
 * [ updated ANTs compile instructions: ITKv4]( https://brianavants.wordpress.com/2012/04/13/updated-ants-compile-instructions-april-12-2012/ ) 
 
 
@@ -138,10 +138,20 @@ ansible-playbook -i inventory/dev systems.yml
 License
 -------
 
-MIT
+- [Christopher Steel](http://mcin-cnim.ca/) | [e-mail](mailto:christopher.steel@mcgill.ca)
+- [John Le](http://mcin-cnim.ca/) | [e-mail](mailto:john.le@mcgill.ca)
+- [Andy Teng](http://mcin-cnim.ca/) | [e-mail](xiaoqiu.teng@mcgill.ca)
 
+License: [MIT](https://tldrlegal.com/license/mit-license)
 
-Author Information
-------------------
+----------
 
-An optional section for the role authors to include contact information, or a website (HTML is not allowed).
+## Open Science
+
+The Neuro has adopted the principles of Open Science. We are inspired by the likes of the Allen Institute for Brain Science, the National Institutes of Health's Human Connectome project, and the Human Genome project. For additional information, please see [Open Science at the Neuro](https://www.mcgill.ca/neuro/open-science-0).
+
+![neuro](imgs/mcin-neuro-logo.png)
+
+  
+
+- ansible-role-ANTs generated using [galaxy-role-skeleton](https://github.com/cjsteel/galaxy-role-skeleton)
